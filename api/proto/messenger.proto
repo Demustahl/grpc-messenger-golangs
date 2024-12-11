@@ -1,0 +1,47 @@
+syntax = "proto3";
+
+package messenger;
+
+option go_package = "grpc-messenger-golang/api/generated";
+
+import "google/protobuf/empty.proto";
+
+message User {
+    string id = 1;
+    string first_name = 2;
+    string last_name = 3;
+    string city = 4;
+    string country = 5;
+    string email = 6;
+}
+
+message FriendRequest {
+    string from_user_id = 1;
+    string to_user_id = 2;
+}
+
+message Chat {
+    string id = 1;
+    string name = 2;
+    repeated string participants = 3; // Список ID участников
+}
+
+message Message {
+    string id = 1;
+    string chat_id = 2;
+    string sender_id = 3;
+    string text = 4;
+    int64 timestamp = 5;
+}
+
+message GetMessagesRequest {
+    string chat_id = 1; // Идентификатор чата
+}
+
+service MessengerService {
+    rpc RegisterUser(User) returns (User);
+    rpc SendFriendRequest(FriendRequest) returns (google.protobuf.Empty);
+    rpc CreateChat(Chat) returns (Chat);
+    rpc SendMessage(Message) returns (google.protobuf.Empty);
+    rpc GetMessages(GetMessagesRequest) returns (stream Message);
+}

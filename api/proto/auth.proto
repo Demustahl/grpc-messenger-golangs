@@ -1,0 +1,21 @@
+syntax = "proto3";
+
+package auth;
+
+option go_package = "grpc-messenger-golang/api/generated";
+
+import "google/protobuf/empty.proto";
+
+message LoginRequest {
+    string email = 1;
+    string password = 2;
+}
+
+message LoginResponse {
+    string token = 1; // JWT
+}
+
+service AuthService {
+    rpc Login(LoginRequest) returns (LoginResponse);
+    rpc Logout(google.protobuf.Empty) returns (google.protobuf.Empty);
+}
