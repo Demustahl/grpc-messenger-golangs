@@ -2,15 +2,30 @@ package utils
 
 import (
 	"context"
+	"os"
 	"time"
 
 	"github.com/golang-jwt/jwt/v5"
+	"github.com/joho/godotenv"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/metadata"
 	"google.golang.org/grpc/status"
 )
 
-var jwtKey = []byte("your_secret_key")
+var jwtKey []byte
+
+func init() {
+	// Load environment variables from the specified file
+	if err := godotenv.Load("jwt-token.env"); err != nil {
+		panic("Error loading jwt-token.env file")
+	}
+
+	// Load JWT key from environment variable
+	jwtKey = []byte(os.Getenv("JWT_SECRET"))
+	if len(jwtKey) == 0 {
+		panic("JWT_SECRET environment variable is not set")
+	}
+}
 
 // Claims представляет данные, которые будут храниться в токене
 type Claims struct {
