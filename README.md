@@ -26,3 +26,4 @@
 Насчет написание фронтенда: будем использовать чистые HTML, CSS и JavaScipt без фреймворков, чтобы не тратить время на их освоение
 
 MongoDB запускаю командой: mongod --dbpath /var/lib/mongodb 
+Генерирую из proto-файлов нужные командой: ./scripts/generate_proto.sh
