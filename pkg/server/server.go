@@ -11,6 +11,7 @@ import (
 	"grpc-messenger-golang/pkg/utils"
 
 	"go.mongodb.org/mongo-driver/bson"
+	"go.mongodb.org/mongo-driver/mongo"
 	"golang.org/x/crypto/bcrypt"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
@@ -45,6 +46,16 @@ func (s *Server) Start(port int) error {
 }
 
 func (s *Server) RegisterUser(ctx context.Context, req *generated.User) (*generated.User, error) {
+	// Проверяем, существует ли email
+	var existingUser generated.User
+	err := s.db.UserCol.FindOne(ctx, bson.M{"email": req.Email}).Decode(&existingUser)
+	if err != mongo.ErrNoDocuments {
+		if err == nil {
+			return nil, status.Errorf(codes.AlreadyExists, "user with this email already exists")
+		}
+		return nil, status.Errorf(codes.Internal, "error checking email existence: %v", err)
+	}
+
 	// Хэшируем пароль
 	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(req.Password), bcrypt.DefaultCost)
 	if err != nil {
