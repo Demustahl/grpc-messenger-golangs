@@ -3,12 +3,14 @@ package server
 import (
 	"context"
 	"fmt"
+	"grpc-messenger-golang/api/generated/auth"
+	"grpc-messenger-golang/api/generated/messenger"
+	"grpc-messenger-golang/pkg/db"
+	"grpc-messenger-golang/pkg/utils"
 	"log"
 	"net"
 
-	"grpc-messenger-golang/api/generated"
-	"grpc-messenger-golang/pkg/db"
-	"grpc-messenger-golang/pkg/utils"
+	"google.golang.org/grpc/reflection"
 
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/mongo"
@@ -21,8 +23,8 @@ import (
 
 type Server struct {
 	db *db.MongoDB
-	generated.UnimplementedMessengerServiceServer
-	generated.UnimplementedAuthServiceServer
+	messenger.UnimplementedMessengerServiceServer
+	auth.UnimplementedAuthServiceServer
 }
 
 func NewServer(db *db.MongoDB) *Server {
@@ -37,17 +39,20 @@ func (s *Server) Start(port int) error {
 
 	grpcServer := grpc.NewServer()
 
-	// Регистрируем сервисы
-	generated.RegisterMessengerServiceServer(grpcServer, s)
-	generated.RegisterAuthServiceServer(grpcServer, s)
+	// Register services
+	messenger.RegisterMessengerServiceServer(grpcServer, s)
+	auth.RegisterAuthServiceServer(grpcServer, s)
+
+	// Включаем Reflection
+	reflection.Register(grpcServer)
 
 	log.Printf("Server is running on port %d", port)
 	return grpcServer.Serve(listener)
 }
 
-func (s *Server) RegisterUser(ctx context.Context, req *generated.User) (*generated.User, error) {
-	// Проверяем, существует ли email
-	var existingUser generated.User
+func (s *Server) Register(ctx context.Context, req *auth.RegisterRequest) (*auth.AuthResponse, error) {
+	// Check if email exists
+	var existingUser auth.RegisterRequest
 	err := s.db.UserCol.FindOne(ctx, bson.M{"email": req.Email}).Decode(&existingUser)
 	if err != mongo.ErrNoDocuments {
 		if err == nil {
@@ -56,16 +61,14 @@ func (s *Server) RegisterUser(ctx context.Context, req *generated.User) (*genera
 		return nil, status.Errorf(codes.Internal, "error checking email existence: %v", err)
 	}
 
-	// Хэшируем пароль
+	// Hash password
 	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(req.Password), bcrypt.DefaultCost)
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "failed to hash password")
 	}
 
-	// Заменяем пароль на его хэш
+	// Save user to database
 	req.Password = string(hashedPassword)
-
-	// Сохраняем пользователя в базе
 	_, err = s.db.UserCol.InsertOne(ctx, req)
 	if err != nil {
 		log.Printf("Failed to register user: %v", err)
@@ -73,39 +76,39 @@ func (s *Server) RegisterUser(ctx context.Context, req *generated.User) (*genera
 	}
 
 	log.Printf("User registered: %+v", req)
-	return req, nil
+	return &auth.AuthResponse{Token: "User registered successfully"}, nil
 }
 
-func (s *Server) Login(ctx context.Context, req *generated.LoginRequest) (*generated.LoginResponse, error) {
-	// Ищем пользователя в базе по email
-	var user generated.User
+func (s *Server) Login(ctx context.Context, req *auth.LoginRequest) (*auth.AuthResponse, error) {
+	// Find user by email
+	var user auth.RegisterRequest
 	err := s.db.UserCol.FindOne(ctx, bson.M{"email": req.Email}).Decode(&user)
 	if err != nil {
 		return nil, status.Errorf(codes.NotFound, "user not found")
 	}
 
-	// Проверяем пароль
+	// Check password
 	err = bcrypt.CompareHashAndPassword([]byte(user.Password), []byte(req.Password))
 	if err != nil {
 		return nil, status.Errorf(codes.Unauthenticated, "invalid credentials")
 	}
 
-	// Генерация JWT токена
-	token, err := utils.GenerateJWT(user.Id)
+	// Generate JWT token
+	token, err := utils.GenerateJWT(user.Email)
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "failed to generate token")
 	}
 
-	return &generated.LoginResponse{Token: token}, nil
+	return &auth.AuthResponse{Token: token}, nil
 }
 
-func (s *Server) SendFriendRequest(ctx context.Context, req *generated.FriendRequest) (*emptypb.Empty, error) {
-	// Проверяем токен
+func (s *Server) SendFriendRequest(ctx context.Context, req *messenger.FriendRequest) (*emptypb.Empty, error) {
+	// Verify token
 	userID, err := utils.VerifyToken(ctx)
 	if err != nil {
 		return nil, err
 	}
 
-	log.Printf("User %s sent a friend request to %s", userID, req.ToUserId)
+	log.Printf("User %s sent a friend request to %s", userID, req.FriendId)
 	return &emptypb.Empty{}, nil
 }

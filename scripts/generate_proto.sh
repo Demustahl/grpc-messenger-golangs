@@ -2,21 +2,21 @@
 
 PROTO_DIR=./api/proto
 OUT_DIR=./api/generated
-WEB_OUT_DIR=./web/src
 
 # Создаем выходные папки, если их нет
-mkdir -p $OUT_DIR
-mkdir -p $WEB_OUT_DIR
+mkdir -p $OUT_DIR/auth
+mkdir -p $OUT_DIR/messenger
 
-# Генерация Go-кода
+# Генерация Go-кода для auth.proto
 protoc -I $PROTO_DIR \
-  --go_out=$OUT_DIR --go_opt=paths=source_relative \
-  --go-grpc_out=$OUT_DIR --go-grpc_opt=paths=source_relative \
-  $PROTO_DIR/*.proto
+  --go_out=$OUT_DIR/auth --go_opt=paths=source_relative \
+  --go-grpc_out=$OUT_DIR/auth --go-grpc_opt=paths=source_relative \
+  $PROTO_DIR/auth.proto
 
-# Генерация кода для gRPC-Web (JS/TS)
+# Генерация Go-кода для messenger.proto
 protoc -I $PROTO_DIR \
-  --grpc-web_out=import_style=commonjs,mode=grpcwebtext:$WEB_OUT_DIR \
-  $PROTO_DIR/*.proto
+  --go_out=$OUT_DIR/messenger --go_opt=paths=source_relative \
+  --go-grpc_out=$OUT_DIR/messenger --go-grpc_opt=paths=source_relative \
+  $PROTO_DIR/messenger.proto
 
 echo "gRPC-код успешно сгенерирован!"

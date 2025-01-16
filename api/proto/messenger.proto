@@ -1,48 +1,99 @@
+// messenger.proto
 syntax = "proto3";
 
 package messenger;
 
-option go_package = "grpc-messenger-golang/api/generated";
-
-import "google/protobuf/empty.proto";
-
-message User {
-    string id = 1;
-    string first_name = 2;
-    string last_name = 3;
-    string city = 4;
-    string country = 5;
-    string email = 6;
-    string password = 7;
-}
-
-message FriendRequest {
-    string from_user_id = 1;
-    string to_user_id = 2;
-}
-
-message Chat {
-    string id = 1;
-    string name = 2;
-    repeated string participants = 3; // Список ID участников
-}
-
-message Message {
-    string id = 1;
-    string chat_id = 2;
-    string sender_id = 3;
-    string text = 4;
-    int64 timestamp = 5;
-}
-
-message GetMessagesRequest {
-    string chat_id = 1; // Идентификатор чата
-}
+option go_package = "grpc-messenger-golang/api/generated/messenger";
 
 service MessengerService {
-    rpc RegisterUser(User) returns (User);
-    rpc SendFriendRequest(FriendRequest) returns (google.protobuf.Empty);
-    rpc CreateChat(Chat) returns (Chat);
-    rpc SendMessage(Message) returns (google.protobuf.Empty);
-    rpc GetMessages(GetMessagesRequest) returns (stream Message);
+  // Поиск пользователей
+  rpc SearchUsers (SearchRequest) returns (SearchResponse);
+  // Добавление друга
+  rpc AddFriend (FriendRequest) returns (FriendResponse);
+  // Получение списка друзей
+  rpc GetFriends (UserRequest) returns (FriendListResponse);
+
+  // Создание чата
+  rpc CreateChat (ChatRequest) returns (ChatResponse);
+  // Получение списка чатов
+  rpc GetChats (UserRequest) returns (ChatListResponse);
+  // Отправка сообщения
+  rpc SendMessage (MessageRequest) returns (MessageResponse);
+}
+
+// Запрос для поиска пользователей
+message SearchRequest {
+  string query = 1;
+}
+
+// Ответ с результатами поиска
+message SearchResponse {
+  repeated User users = 1;
+}
+
+// Запрос на добавление друга
+message FriendRequest {
+  string user_id = 1;
+  string friend_id = 2;
+}
+
+// Ответ на добавление друга
+message FriendResponse {
+  string status = 1;
+}
+
+// Запрос пользователя
+message UserRequest {
+  string user_id = 1;
+}
+
+// Список друзей
+message FriendListResponse {
+  repeated User friends = 1;
+}
+
+// Запрос на создание чата
+message ChatRequest {
+  string name = 1;
+  repeated string participants = 2;
+}
+
+// Ответ на создание чата
+message ChatResponse {
+  string chat_id = 1;
+  string name = 2;
+}
+
+// Ответ со списком чатов
+message ChatListResponse {
+  repeated Chat chats = 1;
+}
+
+// Запрос на отправку сообщения
+message MessageRequest {
+  string chat_id = 1;
+  string sender_id = 2;
+  string text = 3;
+}
+
+// Ответ на отправку сообщения
+message MessageResponse {
+  string status = 1;
+}
+
+// Пользователь
+message User {
+  string user_id = 1;
+  string first_name = 2;
+  string last_name = 3;
+  string city = 4;
+  string country = 5;
+}
+
+// Чат
+message Chat {
+  string chat_id = 1;
+  string name = 2;
+  repeated User participants = 3;
+  string last_message = 4;
 }

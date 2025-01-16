@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"grpc-messenger-golang/pkg/db"
 	"grpc-messenger-golang/pkg/server"
 	"log"
@@ -18,7 +19,7 @@ func main() {
 	if err != nil {
 		log.Fatalf("Failed to connect to MongoDB: %v", err)
 	}
-	defer mongoDB.Client.Disconnect(nil)
+	defer mongoDB.Client.Disconnect(context.Background())
 
 	// Запуск сервера
 	srv := server.NewServer(mongoDB)

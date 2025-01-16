@@ -2,6 +2,7 @@ package utils
 
 import (
 	"context"
+	"log"
 	"os"
 	"time"
 
@@ -15,15 +16,15 @@ import (
 var jwtKey []byte
 
 func init() {
-	// Load environment variables from the specified file
-	if err := godotenv.Load("jwt-token.env"); err != nil {
-		panic("Error loading jwt-token.env file")
+	// Загружаем переменные окружения из файла .env (только для локальной разработки)
+	if err := godotenv.Load(".env"); err != nil {
+		log.Println("No .env file found, using system environment variables")
 	}
 
-	// Load JWT key from environment variable
+	// Загружаем секретный ключ из переменной окружения
 	jwtKey = []byte(os.Getenv("JWT_SECRET"))
 	if len(jwtKey) == 0 {
-		panic("JWT_SECRET environment variable is not set")
+		log.Fatal("JWT_SECRET environment variable is not set")
 	}
 }
 
@@ -33,7 +34,7 @@ type Claims struct {
 	jwt.RegisteredClaims
 }
 
-// Генерация JWT токена
+// GenerateJWT создает JWT токен с указанным сроком действия
 func GenerateJWT(userID string) (string, error) {
 	expirationTime := time.Now().Add(24 * time.Hour)
 	claims := &Claims{
@@ -42,12 +43,11 @@ func GenerateJWT(userID string) (string, error) {
 			ExpiresAt: jwt.NewNumericDate(expirationTime),
 		},
 	}
-
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
 	return token.SignedString(jwtKey)
 }
 
-// Проверка и парсинг токена
+// ParseJWT проверяет и извлекает данные из JWT токена
 func ParseJWT(tokenStr string) (*Claims, error) {
 	claims := &Claims{}
 	token, err := jwt.ParseWithClaims(tokenStr, claims, func(token *jwt.Token) (interface{}, error) {
@@ -59,9 +59,8 @@ func ParseJWT(tokenStr string) (*Claims, error) {
 	return claims, nil
 }
 
-// Проверка токена и извлечение данных
+// VerifyToken проверяет токен в контексте gRPC и возвращает UserID
 func VerifyToken(ctx context.Context) (string, error) {
-	// Извлечение токена из метаданных (например, Authorization)
 	md, ok := metadata.FromIncomingContext(ctx)
 	if !ok {
 		return "", status.Errorf(codes.Unauthenticated, "no metadata found")
@@ -71,12 +70,10 @@ func VerifyToken(ctx context.Context) (string, error) {
 	if !ok || len(authHeader) == 0 {
 		return "", status.Errorf(codes.Unauthenticated, "no authorization token provided")
 	}
-
 	tokenStr := authHeader[0]
 	claims, err := ParseJWT(tokenStr)
 	if err != nil {
 		return "", status.Errorf(codes.Unauthenticated, "invalid token: %v", err)
 	}
-
 	return claims.UserID, nil
 }

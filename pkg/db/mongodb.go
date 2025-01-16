@@ -17,7 +17,8 @@ type MongoDB struct {
 }
 
 func Connect(uri string, dbName string) (*MongoDB, error) {
-	client, err := mongo.NewClient(options.Client().ApplyURI(uri))
+	clientOptions := options.Client().ApplyURI(uri).SetMaxPoolSize(20) // Оптимизация пула соединений
+	client, err := mongo.NewClient(clientOptions)
 	if err != nil {
 		return nil, err
 	}

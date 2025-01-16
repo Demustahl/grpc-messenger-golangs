@@ -27,3 +27,4 @@
 
 MongoDB запускаю командой: mongosh или mongodb-compass
 Генерирую из proto-файлов нужные командой: ./scripts/generate_proto.sh
+Пересборка .proto после их изменения: protoc --go_out=paths=source_relative:. --go-grpc_out=paths=source_relative:. api/proto/auth.proto
